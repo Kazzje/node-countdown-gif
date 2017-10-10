@@ -40,12 +40,25 @@ module.exports = {
         this.ctx = this.canvas.getContext('2d');
         
         // calculate the time difference (if any)
-        let timeResult = this.time(time);
+        var UKTimeZone = momentTimezone.tz(time, "Europe/London");
+		var amsterdam = momentTimezone.tz(time, "Europe/Amsterdam");
+		var london = amsterdam.clone().tz("Europe/London");
 		
-		let UKTimeZone = momentTimezone.tz(time, "Europe/London");
-		let NLTimeZone = momentTimezone.tz(time, "Europe/Amsterdam");
+		this.useTime = null;
 		
-        console.log('UK Timezone: ' + (UKTimeZone.format("MMM Z a ") + UKTimeZone.zoneAbbr()) + ' || ' + 'NL Timezone: ' + (NLTimeZone.format("MMM Z a ") + NLTimeZone.zoneAbbr()));
+		if(this.timezone === 'nl') {
+			this.useTime = amsterdam.format('YYYY-MM-DD HH:mm');
+		} else if(this.timezone === 'uk') {
+			this.useTime = london.format('YYYY-MM-DD HH:mm');
+		}
+		
+        // calculate the time difference (if any)
+        let timeResult = this.time(this.useTime);
+				
+		console.log('Timezone: ' + this.timezone + ' : ' + this.useTime);		
+		console.log('UK: ' + london.format('YYYY-MM-DD HH:mm'));
+		console.log('NL: ' + amsterdam.format('YYYY-MM-DD HH:mm'));
+        console.log('UK Timezone: ' + (UKTimeZone.format("MMM Z a ") + UKTimeZone.zoneAbbr()) + ' || ' + 'NL Timezone: ' + (amsterdam.format("MMM Z a ") + amsterdam.zoneAbbr()));
 		
         // start the gif encoder
         this.encode(timeResult, cb);
@@ -121,7 +134,6 @@ module.exports = {
         let fontSize = Math.floor(this.width / 12) + 'px';
         let fontFamily = 'Courier New'; // monospace works slightly better
         
-		
         // set the font style
         ctx.font = [fontSize, fontFamily].join(' ');
         ctx.textAlign = 'center';
