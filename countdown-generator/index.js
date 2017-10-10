@@ -5,6 +5,7 @@ const path = require('path');
 const GIFEncoder = require('gifencoder');
 const Canvas = require('canvas');
 const moment = require('moment');
+var momentTimezone = require('moment-timezone');
 
 module.exports = {
     /**
@@ -18,15 +19,17 @@ module.exports = {
      * @param {number} frames
      * @param {requestCallback} cb - The callback that is run once complete.
      */
-    init: function(time, width=200, height=200, color='ffffff', bg='000000', name='default', frames=30, cb){
+    init: function(time, width=200, height=200, color='ffffff', bg='000000', name='default', frames=30, cb, timezone='uk'){
         // Set some sensible upper / lower bounds
-        this.width = this.clamp(width, 150, 500);
+        this.width = this.clamp(width, 150, 1000);
         this.height = this.clamp(height, 150, 500);
         this.frames = this.clamp(frames, 1, 90);
         
         this.bg = '#' + bg;
         this.textColor = '#' + color;
         this.name = name;
+		
+		this.timezone = timezone;
         
         // loop optimisations
         this.halfWidth = Number(this.width / 2);
@@ -38,7 +41,12 @@ module.exports = {
         
         // calculate the time difference (if any)
         let timeResult = this.time(time);
-        
+		
+		let UKTimeZone = momentTimezone.tz(time, "Europe/London");
+		let NLTimeZone = momentTimezone.tz(time, "Europe/Amsterdam");
+		
+        console.log('UK Timezone: ' + (UKTimeZone.format("MMM Z a ") + UKTimeZone.zoneAbbr()) + ' || ' + 'NL Timezone: ' + (NLTimeZone.format("MMM Z a ") + NLTimeZone.zoneAbbr()));
+		
         // start the gif encoder
         this.encode(timeResult, cb);
     },
@@ -74,6 +82,14 @@ module.exports = {
             return moment.duration(difference);
         }
     },
+	
+	 setTrack: function (ctx) {
+		ctx.strokeStyle = 'hsla(2, 8%, 46%, 0.45)';
+		ctx.lineWidth = 4;
+		ctx.beginPath();
+		ctx.arc(36, 36, 27, 0, Math.PI*2);
+		ctx.stroke();
+	  },
     /**
      * Encode the GIF with the information provided by the time function
      * @param {string|Object} timeResult - either the date passed string, or a valid moment duration object
@@ -105,6 +121,7 @@ module.exports = {
         let fontSize = Math.floor(this.width / 12) + 'px';
         let fontFamily = 'Courier New'; // monospace works slightly better
         
+		
         // set the font style
         ctx.font = [fontSize, fontFamily].join(' ');
         ctx.textAlign = 'center';
@@ -124,6 +141,7 @@ module.exports = {
                 let hours = Math.floor(timeResult.asHours() - (days * 24));
                 let minutes = Math.floor(timeResult.asMinutes()) - (days * 24 * 60) - (hours * 60);
                 let seconds = Math.floor(timeResult.asSeconds()) - (days * 24 * 60 * 60) - (hours * 60 * 60) - (minutes * 60);
+				let timezone = this.timezone;
                 
                 // make sure we have at least 2 characters in the string
                 days = (days.toString().length == 1) ? '0' + days : days;
@@ -132,16 +150,43 @@ module.exports = {
                 seconds = (seconds.toString().length == 1) ? '0' + seconds : seconds;
                 
                 // build the date string
-                let string = [days, 'd ', hours, 'h ', minutes, 'm ', seconds, 's'].join('');
-                
+				
                 // paint BG
                 ctx.fillStyle = this.bg;
                 ctx.fillRect(0, 0, this.width, this.height);
                 
                 // paint text
                 ctx.fillStyle = this.textColor;
-                ctx.fillText(string, this.halfWidth, this.halfHeight);
-                
+                var fontFace="helvetica, arial, sans-serif";
+				
+				// DAYS
+				ctx.font='84px '+fontFace;
+				ctx.fillText(days, 70, 60);
+				
+				ctx.font='24px '+fontFace;
+				ctx.fillText("days", 70, 100 + (20/2));
+				
+				// HOURS
+				ctx.font='84px '+fontFace;
+				ctx.fillText(hours, 200, 60);
+				
+				ctx.font='24px '+fontFace;
+				ctx.fillText("hours", 200, 100 + (20/2));
+				
+				// MINUTES
+				ctx.font='84px '+fontFace;
+				ctx.fillText(minutes, 330, 60);
+				
+				ctx.font='24px '+fontFace;
+				ctx.fillText("minutes", 330, 100 + (20/2));
+				
+				// SECONDS
+				ctx.font='84px '+fontFace;
+				ctx.fillText(seconds, 460, 60);
+				
+				ctx.font='24px '+fontFace;
+				ctx.fillText("seconds", 460, 100 + (20/2));
+				
                 // add finalised frame to the gif
                 enc.addFrame(ctx);
                 
