@@ -5,7 +5,6 @@ const path = require('path');
 const GIFEncoder = require('gifencoder');
 const Canvas = require('canvas');
 const moment = require('moment');
-var momentTimezone = require('moment-timezone');
 
 module.exports = {
     /**
@@ -40,25 +39,7 @@ module.exports = {
         this.ctx = this.canvas.getContext('2d');
         
         // calculate the time difference (if any)
-        var UKTimeZone = momentTimezone.tz(time, "Europe/London");
-		var amsterdam = momentTimezone.tz(time, "Europe/Amsterdam");
-		var london = amsterdam.clone().tz("Europe/London");
-		
-		this.useTime = null;
-		
-		if(this.timezone === 'nl') {
-			this.useTime = amsterdam.format('YYYY-MM-DD HH:mm');
-		} else if(this.timezone === 'uk') {
-			this.useTime = london.format('YYYY-MM-DD HH:mm');
-		}
-		
-        // calculate the time difference (if any)
-        let timeResult = this.time(this.useTime);
-				
-		console.log('Timezone: ' + this.timezone + ' : ' + this.useTime);		
-		console.log('UK: ' + london.format('YYYY-MM-DD HH:mm'));
-		console.log('NL: ' + amsterdam.format('YYYY-MM-DD HH:mm'));
-        console.log('UK Timezone: ' + (UKTimeZone.format("MMM Z a ") + UKTimeZone.zoneAbbr()) + ' || ' + 'NL Timezone: ' + (amsterdam.format("MMM Z a ") + amsterdam.zoneAbbr()));
+        let timeResult = this.time(time);
 		
         // start the gif encoder
         this.encode(timeResult, cb);
@@ -89,7 +70,7 @@ module.exports = {
         
         // either the date has passed, or we have a difference
         if(difference <= 0){
-            return 'Date has passed!';
+            return 'Campaign has been ended!';
         } else {
             // duration of the difference
             return moment.duration(difference);
@@ -153,7 +134,6 @@ module.exports = {
                 let hours = Math.floor(timeResult.asHours() - (days * 24));
                 let minutes = Math.floor(timeResult.asMinutes()) - (days * 24 * 60) - (hours * 60);
                 let seconds = Math.floor(timeResult.asSeconds()) - (days * 24 * 60 * 60) - (hours * 60 * 60) - (minutes * 60);
-				let timezone = this.timezone;
                 
                 // make sure we have at least 2 characters in the string
                 days = (days.toString().length == 1) ? '0' + days : days;
