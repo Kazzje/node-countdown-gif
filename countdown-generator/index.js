@@ -18,29 +18,29 @@ module.exports = {
      * @param {number} frames
      * @param {requestCallback} cb - The callback that is run once complete.
      */
-    init: function(time, width=200, height=200, color='ffffff', bg='000000', name='default', frames=30, cb, timezone='uk'){
+    init: function (time, width = 200, height = 200, color = 'ffffff', bg = '000000', name = 'default', frames = 30, cb, timezone = 'uk') {
         // Set some sensible upper / lower bounds
         this.width = this.clamp(width, 150, 1000);
         this.height = this.clamp(height, 150, 500);
         this.frames = this.clamp(frames, 1, 90);
-        
+
         this.bg = '#' + bg;
         this.textColor = '#' + color;
         this.name = name;
-		
-		this.timezone = timezone;
-        
+
+        this.timezone = timezone;
+
         // loop optimisations
         this.halfWidth = Number(this.width / 2);
         this.halfHeight = Number(this.height / 2);
-        
+
         this.encoder = new GIFEncoder(this.width, this.height);
         this.canvas = new Canvas(this.width, this.height);
         this.ctx = this.canvas.getContext('2d');
-        
+
         // calculate the time difference (if any)
         let timeResult = this.time(time);
-		
+
         // start the gif encoder
         this.encode(timeResult, cb);
     },
@@ -52,7 +52,7 @@ module.exports = {
      * @param max - maximum value number can have
      * @returns {number}
      */
-    clamp: function(number, min, max){
+    clamp: function (number, min, max) {
         return Math.max(min, Math.min(number, max));
     },
     /**
@@ -64,57 +64,58 @@ module.exports = {
         // grab the current and target time
         let target = moment(timeString);
         let current = moment();
-        
+
         // difference between the 2 (in ms)
         let difference = target.diff(current);
-        
+
         // either the date has passed, or we have a difference
-        if(difference <= 0){
+        if (difference <= 0) {
             return 'Campaign has been ended!';
         } else {
             // duration of the difference
             return moment.duration(difference);
         }
     },
-	
-	 setTrack: function (ctx) {
-		ctx.strokeStyle = 'hsla(2, 8%, 46%, 0.45)';
-		ctx.lineWidth = 4;
-		ctx.beginPath();
-		ctx.arc(36, 36, 27, 0, Math.PI*2);
-		ctx.stroke();
-	  },
+
+    setTrack: function (ctx) {
+        ctx.strokeStyle = 'hsla(2, 8%, 46%, 0.45)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(36, 36, 27, 0, Math.PI * 2);
+        ctx.stroke();
+    },
     /**
      * Encode the GIF with the information provided by the time function
      * @param {string|Object} timeResult - either the date passed string, or a valid moment duration object
      * @param {requestCallback} cb - the callback to be run once complete
      */
-    encode: function(timeResult, cb){
+    encode: function (timeResult, cb) {
         let enc = this.encoder;
         let ctx = this.ctx;
         let tmpDir = process.cwd() + '/tmp/';
 
         // create the tmp directory if it doesn't exist
-        if (!fs.existsSync(tmpDir)){
+        if (!fs.existsSync(tmpDir)) {
             fs.mkdirSync(tmpDir);
         }
-        
+
         let filePath = tmpDir + this.name + '.gif';
-        
+
         // pipe the image to the filesystem to be written
         let imageStream = enc
-                .createReadStream()
-                    .pipe(fs.createWriteStream(filePath));
+            .createReadStream()
+            .pipe(fs.createWriteStream(filePath));
         // once finised, generate or serve
         imageStream.on('finish', () => {
             // only execute callback if it is a function
             typeof cb === 'function' && cb();
         });
-        
+
         // estimate the font size based on the provided width
         let fontSize = Math.floor(this.width / 12) + 'px';
         let fontFamily = 'Courier New'; // monospace works slightly better
-        
+        let fontFace = "helvetica, arial, sans-serif";
+
         // set the font style
         ctx.font = [fontSize, fontFamily].join(' ');
         ctx.textAlign = 'center';
@@ -127,77 +128,77 @@ module.exports = {
         enc.setQuality(10);
 
         // if we have a moment duration object
-        if(typeof timeResult === 'object'){
-            for(let i = 0; i < this.frames; i++){
+        if (typeof timeResult === 'object') {
+            for (let i = 0; i < this.frames; i++) {
                 // extract the information we need from the duration
                 let days = Math.floor(timeResult.asDays());
                 let hours = Math.floor(timeResult.asHours() - (days * 24));
                 let minutes = Math.floor(timeResult.asMinutes()) - (days * 24 * 60) - (hours * 60);
                 let seconds = Math.floor(timeResult.asSeconds()) - (days * 24 * 60 * 60) - (hours * 60 * 60) - (minutes * 60);
-                
+
                 // make sure we have at least 2 characters in the string
                 days = (days.toString().length == 1) ? '0' + days : days;
                 hours = (hours.toString().length == 1) ? '0' + hours : hours;
                 minutes = (minutes.toString().length == 1) ? '0' + minutes : minutes;
                 seconds = (seconds.toString().length == 1) ? '0' + seconds : seconds;
-                
+
                 // build the date string
-				
+
                 // paint BG
                 ctx.fillStyle = this.bg;
                 ctx.fillRect(0, 0, this.width, this.height);
-                
+
                 // paint text
                 ctx.fillStyle = this.textColor;
-                var fontFace="helvetica, arial, sans-serif";
-				
-				// DAYS
-				ctx.font='84px '+fontFace;
-				ctx.fillText(days, 70, 60);
-				
-				ctx.font='24px '+fontFace;
-				ctx.fillText("days", 70, 100 + (20/2));
-				
-				// HOURS
-				ctx.font='84px '+fontFace;
-				ctx.fillText(hours, 200, 60);
-				
-				ctx.font='24px '+fontFace;
-				ctx.fillText("hours", 200, 100 + (20/2));
-				
-				// MINUTES
-				ctx.font='84px '+fontFace;
-				ctx.fillText(minutes, 330, 60);
-				
-				ctx.font='24px '+fontFace;
-				ctx.fillText("minutes", 330, 100 + (20/2));
-				
-				// SECONDS
-				ctx.font='84px '+fontFace;
-				ctx.fillText(seconds, 460, 60);
-				
-				ctx.font='24px '+fontFace;
-				ctx.fillText("seconds", 460, 100 + (20/2));
-				
+
+                // DAYS
+                ctx.font = '84px ' + fontFace;
+                ctx.fillText(days, 70, 60);
+
+                ctx.font = '24px ' + fontFace;
+                ctx.fillText("days", 70, 100 + (20 / 2));
+
+                // HOURS
+                ctx.font = '84px ' + fontFace;
+                ctx.fillText(hours, 200, 60);
+
+                ctx.font = '24px ' + fontFace;
+                ctx.fillText("hours", 200, 100 + (20 / 2));
+
+                // MINUTES
+                ctx.font = '84px ' + fontFace;
+                ctx.fillText(minutes, 330, 60);
+
+                ctx.font = '24px ' + fontFace;
+                ctx.fillText("minutes", 330, 100 + (20 / 2));
+
+                // SECONDS
+                ctx.font = '84px ' + fontFace;
+                ctx.fillText(seconds, 460, 60);
+
+                ctx.font = '24px ' + fontFace;
+                ctx.fillText("seconds", 460, 100 + (20 / 2));
+
                 // add finalised frame to the gif
                 enc.addFrame(ctx);
-                
+
                 // remove a second for the next loop
                 timeResult.subtract(1, 'seconds');
             }
         } else {
             // Date has passed so only using a string
-            
+
             // BG
             ctx.fillStyle = this.bg;
             ctx.fillRect(0, 0, this.width, this.height);
-            
+
             // Text
+            ctx.font = '24px ' + fontFace;
             ctx.fillStyle = this.textColor;
             ctx.fillText(timeResult, this.halfWidth, this.halfHeight);
             enc.addFrame(ctx);
         }
-        
+
         // finish the gif
         enc.finish();
     }
