@@ -20,7 +20,7 @@ module.exports = {
      * @param {number} frames
      * @param {requestCallback} cb - The callback that is run once complete.
      */
-    init: function (time, width = 200, height = 200, color = 'ffe600', bg = '000000', name = 'default', frames = 30, cb, timezone = 'uk', datepassedtext = 'Date has passed!') {
+    init: function (time, width = 640, height = 80, color = 'ffe600', bg = '000000', name = 'default', frames = 30, cb, timezone = 'uk', datepassedtext = 'Date has passed!') {
         // Set some sensible upper / lower bounds
         this.width = this.clamp(width, 150, 1000);
         this.height = this.clamp(height, 150, 500);
