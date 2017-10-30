@@ -20,7 +20,7 @@ module.exports = {
      * @param {number} frames
      * @param {requestCallback} cb - The callback that is run once complete.
      */
-    init: function (time, width = 200, height = 200, color = 'ffe600', bg = '000000', name = 'default', frames = 30, cb, timezone = 'uk') {
+    init: function (time, width = 200, height = 200, color = 'ffe600', bg = '000000', name = 'default', frames = 30, cb, timezone = 'uk', datepassedtext = 'Date has passed!') {
         // Set some sensible upper / lower bounds
         this.width = this.clamp(width, 150, 1000);
         this.height = this.clamp(height, 150, 500);
@@ -30,6 +30,7 @@ module.exports = {
         this.textColor = '#' + color;
         this.name = name;
         this.timezone = timezone;
+        this.datepassedtext = datepassedtext;
 
         // loop optimisations
         this.halfWidth = Number(this.width / 2);
@@ -105,7 +106,7 @@ module.exports = {
 
         // either the date has passed, or we have a difference
         if (difference <= 0) {
-            return 'Date has passed!';
+            return this.datepassedtext || 'Date has passed!';
         } else {
             // duration of the difference
             return moment.duration(difference);
