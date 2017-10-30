@@ -6,6 +6,8 @@ const GIFEncoder = require('gifencoder');
 const Canvas = require('canvas');
 const moment = require('moment');
 
+var momentTimezone = require('moment-timezone');
+
 module.exports = {
     /**
      * Initialise the GIF generation
@@ -18,7 +20,7 @@ module.exports = {
      * @param {number} frames
      * @param {requestCallback} cb - The callback that is run once complete.
      */
-    init: function (time, width = 200, height = 200, color = 'ffffff', bg = '000000', name = 'default', frames = 30, cb, timezone = 'uk', datepassed = 'This campaign has ended!') {
+    init: function (time, width = 200, height = 200, color = 'ffe600', bg = '000000', name = 'default', frames = 30, cb, timezone = 'uk') {
         // Set some sensible upper / lower bounds
         this.width = this.clamp(width, 150, 1000);
         this.height = this.clamp(height, 150, 500);
@@ -27,9 +29,7 @@ module.exports = {
         this.bg = '#' + bg;
         this.textColor = '#' + color;
         this.name = name;
-
         this.timezone = timezone;
-        this.datepassed = datepassed;
 
         // loop optimisations
         this.halfWidth = Number(this.width / 2);
@@ -44,6 +44,24 @@ module.exports = {
 
         // start the gif encoder
         this.encode(timeResult, cb);
+    },
+
+    calcTime: function (city, offset) {
+
+        // create Date object for current location
+        var d = new Date();
+
+        // convert to msec
+        // add local time zone offset
+        // get UTC time in msec
+        var utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+
+        // create new Date object for different city
+        // using supplied offset
+        var nd = new Date(utc + (3600000 * offset));
+
+        // return time as a string
+        return "The local time in " + city + " is " + nd.toLocaleString();
     },
     /**
      * Limit a value between a min / max
@@ -63,21 +81,48 @@ module.exports = {
      */
     time: function (timeString) {
         // grab the current and target time
-        let target = moment(timeString);
-        let current = moment();
+
+        var target = momentTimezone.tz(timeString, "Europe/London");
+        var current = momentTimezone.tz("Europe/London");
+
+        if (this.timezone === 'nl') {
+            target = momentTimezone.tz(timeString, "Europe/Amsterdam");
+            current = momentTimezone.tz("Europe/Amsterdam");
+        } else if (this.timezone === 'ru') {
+            target = momentTimezone.tz(timeString, "Europe/Moscow");
+            current = momentTimezone.tz("Europe/Moscow");
+        } else if (this.timezone === 'uk') {
+            target = momentTimezone.tz(timeString, "Europe/London");
+            current = momentTimezone.tz("Europe/London");
+        }
 
         // difference between the 2 (in ms)
         let difference = target.diff(current);
 
+        console.log('Target: ' + target.format('YYYY-MM-DD HH:mm') + ' Zone: ' + this.timezone.toUpperCase());
+        console.log('Current: ' + current.format('YYYY-MM-DD HH:mm') + ' Zone: ' + this.timezone.toUpperCase());
+        console.log('Difference: ' + moment.duration(difference));
+
         // either the date has passed, or we have a difference
         if (difference <= 0) {
-            return this.datepassed;
+            return 'Date has passed!';
         } else {
             // duration of the difference
             return moment.duration(difference);
         }
     },
-
+    drawMessage: function(message, x, y) {
+      this.ctx.fillText(message, x, y);
+    },
+    drawLine: function(x, y) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, y || 15);
+      this.ctx.lineTo(x, y || 130);
+      this.ctx.lineWidth = 2;
+      // set line color
+      this.ctx.strokeStyle = '#ffe600';
+      this.ctx.stroke();
+    },
     setTrack: function (ctx) {
         ctx.strokeStyle = 'hsla(2, 8%, 46%, 0.45)';
         ctx.lineWidth = 4;
@@ -115,7 +160,7 @@ module.exports = {
         // estimate the font size based on the provided width
         let fontSize = Math.floor(this.width / 12) + 'px';
         let fontFamily = 'Courier New'; // monospace works slightly better
-        let fontFace = "helvetica, arial, sans-serif";
+
 
         // set the font style
         ctx.font = [fontSize, fontFamily].join(' ');
@@ -136,6 +181,7 @@ module.exports = {
                 let hours = Math.floor(timeResult.asHours() - (days * 24));
                 let minutes = Math.floor(timeResult.asMinutes()) - (days * 24 * 60) - (hours * 60);
                 let seconds = Math.floor(timeResult.asSeconds()) - (days * 24 * 60 * 60) - (hours * 60 * 60) - (minutes * 60);
+                let timezone = this.timezone;
 
                 // make sure we have at least 2 characters in the string
                 days = (days.toString().length == 1) ? '0' + days : days;
@@ -153,32 +199,46 @@ module.exports = {
                 ctx.fillStyle = this.textColor;
 
                 // DAYS
-                ctx.font = '84px ' + fontFace;
-                ctx.fillText(days, 70, 60);
+                var metrics = ctx.measureText("DAYS");
+                var textWidth = metrics.width;
+                var xPosition = (this.canvas.width/2) - (textWidth/2);
+                var yPosition = (this.canvas.height/2);
 
-                ctx.font = '24px ' + fontFace;
-                ctx.fillText("days", 70, 100 + (20 / 2));
+                ctx.font = "800 50pt helvetica";
+                this.drawMessage(days, 125, 60);
+                ctx.font = "800 10pt helvetica";
+                this.drawMessage("DAYS", 125, 100 + (10 / 2));
+
+                // First line
+                this.drawLine(190);
 
                 // HOURS
-                ctx.font = '84px ' + fontFace;
-                ctx.fillText(hours, 200, 60);
+                ctx.font = "300 50pt helvetica";
+                this.drawMessage(hours, 250, 60);
+                ctx.font = "300 10pt helvetica";
+                this.drawMessage("HOURS", 250, 100 + (10 / 2));
 
-                ctx.font = '24px ' + fontFace;
-                ctx.fillText("hours", 200, 100 + (20 / 2));
+                // Second Line
+                this.drawLine(315);
 
                 // MINUTES
-                ctx.font = '84px ' + fontFace;
-                ctx.fillText(minutes, 330, 60);
+                ctx.font = "300 50pt helvetica";
+                this.drawMessage(minutes, 375, 60);
+                ctx.font = "300 10pt helvetica";
+                this.drawMessage("MINUTES", 375, 100 + (10 / 2));
 
-                ctx.font = '24px ' + fontFace;
-                ctx.fillText("minutes", 330, 100 + (20 / 2));
+                // Third Line
+                this.drawLine(440);
 
                 // SECONDS
-                ctx.font = '84px ' + fontFace;
-                ctx.fillText(seconds, 460, 60);
+                ctx.font = "300 50pt helvetica";
+                this.drawMessage(seconds, 500, 60);
+                ctx.font = "300 10pt helvetica";
+                this.drawMessage("SECONDS", 505, 100 + (10 / 2));
 
-                ctx.font = '24px ' + fontFace;
-                ctx.fillText("seconds", 460, 100 + (20 / 2));
+                let string = [days, 'd ', hours, 'h ', minutes, 'm ', seconds, 's'].join('');
+
+                console.log('string: ' + string);
 
                 // add finalised frame to the gif
                 enc.addFrame(ctx);
@@ -194,9 +254,8 @@ module.exports = {
             ctx.fillRect(0, 0, this.width, this.height);
 
             // Text
-            ctx.font = '24px ' + fontFace;
             ctx.fillStyle = this.textColor;
-            ctx.fillText(timeResult, this.halfWidth, this.halfHeight);
+            this.drawMessage(timeResult, this.halfWidth, this.halfHeight);
             enc.addFrame(ctx);
         }
 
